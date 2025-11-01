@@ -5,9 +5,6 @@
 #define MATRIX_ROWS 8
 #define MATRIX_COLS 19
 
-#define MATRIX_ROWS_PER_SIDE (MATRIX_ROWS / 2)
-#define MATRIX_COLS_PER_SIDE (MATRIX_COLS / 2)
-
 /*
 #define UNUSED_MCU
 #define UNUSED_MCP
@@ -41,14 +38,6 @@
    { }
 */
 
-/* MCU pins */
-//static const pin_t MATRIX_ROW_PINS_MCU[] = { B5, B6, B7 };
-//static const pin_t MATRIX_COL_PINS_MCU[] = { A3, A4, A5, A6, A7, B0, B1, B10, B12, B15, A8, A13, A14 };
-
-/* MCP23017 pins */
-//static const uint8_t MATRIX_ROW_PINS_MCP[] = { A0, A1, A2, A3, A4 };
-//static const uint8_t MATRIX_COL_PINS_MCP[] = { B0, B1, B2, B3, B4, B5 };
-
 /* Matrix Configuration*/
 #define DIODE_DIRECTION COL2ROW
 
@@ -59,7 +48,8 @@
 #define DEBOUNCE 5
 
 /* I2C SETTINGS */
-#define I2C_DRIVER I2CD2
+#define I2C_DRIVER I2CD1
+//#define I2C_DRIVER I2CD2
 #define I2C1_SCL_PIN B8     // I2C Pin 1
 #define I2C1_SDA_PIN B9     // I2C Pin 2
 #define I2C1_TIMINGR_PRESC 2U
