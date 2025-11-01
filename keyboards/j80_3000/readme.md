@@ -4,8 +4,8 @@
 
 This is my first keyboard project involving QMK programming.
 
-This project aims to take old Cherry G80-3000's and make them QMK and VIA ready, by swapping the built-in microchip with a WeAct! STM32F411 Blackpill, reusing the old PCB and adding an Adafruit to allow for the big switch matrix. Also I will add a female USB-C port to the keyboard case
-with a 3D-printed cover.
+This project aims to take old Cherry G80-3000's and make them QMK and VIA ready, by swapping the built-in microchip with a WeAct! STM32F411 Blackpill, reusing the old PCB and adding an Adafruit to allow for the big switch matrix. Also I will add a female USB-C port to the keyboard case with a 3D-printed cover. But first I have to figure out how to make the I2C Epander work.
+
 My G80-3000 is an old version with a 102 key ISO layout, missing the Windows keys and the Menu key. Also it has an old DIN-connector.
 For now I will focus on getting this prototype running and making it hot-swappable by using Millmax style sockets. Also I will add a 3D printed switch plate I found online. After that I might think about adding a 105 key ISO layout and Bluethooth and 2.4 GHz connectivity, or making a ATMega324U version.
 

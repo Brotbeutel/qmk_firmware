@@ -41,7 +41,6 @@
    { }
 */
 
-
 /* MCU pins */
 //static const pin_t MATRIX_ROW_PINS_MCU[] = { B5, B6, B7 };
 //static const pin_t MATRIX_COL_PINS_MCU[] = { A3, A4, A5, A6, A7, B0, B1, B10, B12, B15, A8, A13, A14 };
