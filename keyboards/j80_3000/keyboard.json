@@ -2,10 +2,11 @@
     "manufacturer": "Brotbeutel",
     "keyboard_name": "j80_3000",
     "maintainer": "Brotbeutel",
+    "board": "blackpill_f411",
     "development_board": "blackpill_f411",
     "processor": "STM32F411",
     "bootloader": "stm32-dfu",
-    //"diode_direction": "COL2ROW",
+    "diode_direction": "COL2ROW",
     //"url": "",
     "usb": {
         "device_version": "1.0.0",

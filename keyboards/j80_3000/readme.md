@@ -1,4 +1,4 @@
-# j80_3000
+# J80-3000
 
 ![j80_3000](imgur.com image replace me!)
 
@@ -12,10 +12,12 @@ For now I will focus on getting this prototype running and making it hot-swappab
 
 * Keyboard Maintainer: [Brotbeutel](https://github.com/Brotbeutel)
 * Hardware Supported: G80-3000 PCB, WeAct STM32F411 Blackpill, Adafruit MCP23017 I2C Expander
-* Hardware Availability: WeAct! BlackPill STM32F411: https://de.aliexpress.com/item/1005001456186625.html
-                         Adafruit MCP23017 I2C Expander: https://de.aliexpress.com/item/1005005596741592.html
-                         Hot Swap Sockets: https://de.aliexpress.com/item/1005009260905480.html
-                         3D-Printable Plate: https://www.printables.com/model/607992-plate-for-1990-cherry-g80-3000-hao-wkl-keyboard/collections?lang=de
+* Hardware Availability: 
+
+    WeAct BlackPill STM32F411: https://de.aliexpress.com/item/1005001456186625.html<br>
+    Adafruit MCP23017 I2C Expander: https://de.aliexpress.com/item/1005005596741592.html<br>
+    RTLECS Hot Swap Sockets: https://de.aliexpress.com/item/1005009260905480.html<br>
+    3D-Printable Plate: https://www.printables.com/model/607992-plate-for-1990-cherry-g80-3000-hao-wkl-keyboard/collections?lang=de
 
 Make example for this keyboard (after setting up your build environment):
 
