@@ -11,7 +11,10 @@
         "pid": "0x0000",
         "vid": "0xFEED"
     },
-    "features": {},
+    "features": {
+        "bootmagic": true,
+        "via": true
+    },
     "layouts": {
         "LAYOUT_fullsize_iso_105": {
             "layout": [
