@@ -1,38 +1,122 @@
 # J80-3000
 
-![j80_3000](imgur.com image replace me!)
+> QMK & VIA firmware for the Cherry G80-3000, powered by a WeAct STM32F411 BlackPill and an Adafruit MCP23017 I2C GPIO expander.
 
-This is my first keyboard project involving QMK programming.
+---
 
-This project aims to take old Cherry G80-3000's and make them QMK and VIA ready, by swapping the built-in microchip with a WeAct BlackPill STM32F411, reusing the old PCB and adding an Adafruit to allow for the big switch matrix. Also I will add a female USB-C port to the keyboard case with a 3D-printed cover. But first I have to figure out how to make the I2C Epander work.
+## Overview
 
-My G80-3000 is an old version with a 102 key ISO layout, missing the Windows keys and the Menu key. Also it has an old DIN-connector.
-For now I will focus on getting this prototype running and making it hot-swappable by using Millmax style sockets from RTLECS. Also I will add a 3D printed switch plate I found online. After that I might think about adding a 105 key ISO layout and Bluethooth and 2.4 GHz connectivity, or making a ATMega324U version.
+This project converts a vintage **Cherry G80-3000** keyboard to run open-source QMK firmware with full VIA support. The original controller is replaced by a **WeAct STM32F411 BlackPill**, and an **Adafruit MCP23017 I2C expander** handles the additional matrix lines that the MCU alone cannot cover.
 
+The target layout is a **102-key ISO** (no Windows/Menu keys, original DIN connector replaced with USB-C).
 
-* Keyboard Maintainer: [Brotbeutel](https://github.com/Brotbeutel)
-* Hardware Supported: G80-3000 PCB, WeAct STM32F411 Blackpill, Adafruit MCP23017 I2C Expander
-* Hardware Availability: 
+### Goals
+- Full QMK + VIA compatibility
+- Hot-swap sockets (Millmax-style from RTLECS)
+- 3D-printed switch plate
+- USB-C port
+- Possible future extensions: Bluetooth / 2.4 GHz
 
-    WeAct BlackPill STM32F411: https://de.aliexpress.com/item/1005001456186625.html<br>
-    Adafruit MCP23017 I2C Expander: https://de.aliexpress.com/item/1005005596741592.html<br>
-    RTLECS Hot Swap Sockets: https://de.aliexpress.com/item/1005009260905480.html<br>
-    3D-Printable Plate: https://www.printables.com/model/607992-plate-for-1990-cherry-g80-3000-hao-wkl-keyboard/collections?lang=de
+---
 
-Make example for this keyboard (after setting up your build environment):
+## Hardware
 
-    make j80_3000:default
+| Component | Source |
+|---|---|
+| WeAct STM32F411 BlackPill | [AliExpress](https://de.aliexpress.com/item/1005001456186625.html) |
+| Adafruit MCP23017 I2C Expander | [AliExpress](https://de.aliexpress.com/item/1005005596741592.html) |
+| RTLECS Hot-Swap Sockets | [AliExpress](https://de.aliexpress.com/item/1005009260905480.html) |
+| 3D-Printable Switch Plate | [Printables](https://www.printables.com/model/607992-plate-for-1990-cherry-g80-3000-hao-wkl-keyboard) |
 
-Flashing example for this keyboard:
+### Wiring Summary
 
-    make j80_3000:default:flash
+**MCU → Matrix**
 
-See the [build environment setup](https://docs.qmk.fm/#/getting_started_build_tools) and the [make instructions](https://docs.qmk.fm/#/getting_started_make_guide) for more information. Brand new to QMK? Start with our [Complete Newbs Guide](https://docs.qmk.fm/#/newbs).
+| Pin | Function |
+|---|---|
+| PB5, PB6, PB7, PB8, PB9 | Rows 0–4 |
+| PC14, PA3, PB0, PB1, PB10, PB12–PB15 | Cols 0, 1, 6, 7, 9, 13–16 |
+| PA8 | I2C3 SCL → MCP23017 |
+| PB4 | I2C3 SDA → MCP23017 |
+| PA15 | NumLock LED |
+| PB3 | CapsLock LED |
+
+**MCP23017 → Matrix**
+
+| MCP Pin | Function |
+|---|---|
+| GPA2, GPA3, GPA4 | Rows 5–7 |
+| GPA0 | Col 17 |
+| GPB0–GPB7 | Cols 2–5, 8, 10–12 |
+| GPA1 | ScrollLock LED |
+
+---
+
+## Firmware
+
+### Prerequisites
+
+- [QMK Firmware](https://github.com/qmk/qmk_firmware)
+- [QMK MSYS](https://msys.qmk.fm/) (Windows) or native Linux/macOS environment
+
+### Setup
+
+```bash
+qmk setup
+```
+
+Place this keyboard folder at:
+```
+qmk_firmware/keyboards/j80_3000/
+```
+
+### Build
+
+```bash
+qmk compile -kb j80_3000 -km default
+```
+
+### Flash
+
+Enter the bootloader first (see below), then:
+
+```bash
+qmk flash -kb j80_3000 -km default
+```
+
+Or use **STM32CubeProgrammer** with the generated `.bin` file for more reliable flashing.
+
+---
 
 ## Bootloader
 
-Enter the bootloader in 3 ways:
+Enter the bootloader via one of these methods:
 
-* **Bootmagic reset**: Hold down the key at (0,0) in the matrix (usually the top left key or Escape) and plug in the keyboard
-* **Physical reset button**: Briefly press the button on the back of the PCB - some may have pads you must short instead
-* **Keycode in layout**: Press the key mapped to `QK_BOOT` if it is available
+- **Bootmagic reset** — Hold the top-left key (matrix position 0,0) while plugging in USB
+- **Physical reset** — Press the RESET button on the BlackPill
+- **Keycode** — Press the key mapped to `QK_BOOT` if available in your keymap
+
+---
+
+## VIA Support
+
+This keyboard supports [VIA](https://www.caniusevia.com/) for live keymap editing. Load the included `via.json` as a custom definition in VIA if the keyboard is not automatically detected.
+
+---
+
+## Project Status
+
+- [x] USB enumeration working
+- [x] MCU-direct keys functional
+- [x] QMK + VIA compiling and flashing
+- [ ] MCP23017 I2C key scanning (in progress)
+- [ ] LED support (NumLock, CapsLock, ScrollLock)
+- [ ] Hot-swap socket installation
+- [ ] USB-C port integration
+- [ ] 3D-printed plate
+
+---
+
+## Maintainer
+
+[Brotbeutel](https://github.com/Brotbeutel)
