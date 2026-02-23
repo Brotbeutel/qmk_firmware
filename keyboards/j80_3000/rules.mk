@@ -1,6 +1,6 @@
 MCU = STM32F411
 I2C_DRIVER_REQUIRED = yes
-CUSTOM_MATRIX = lite
+CUSTOM_MATRIX = yes
 SRC += matrix.c keyboard.c
 VIA_ENABLE = yes
 MOUSEKEY_ENABLE = no

@@ -1,62 +1,84 @@
 #pragma once
 
-/* ── Matrix size ─────────────────────────────────────────────────────── */
+/* KEY MATRIX SIZE */
 #define MATRIX_ROWS 8
 #define MATRIX_COLS 18
 
 /*
- * WIRING REFERENCE — sourced from Connections sheet (authoritative)
+ * WIRING — matches J80-3000 Pinout spreadsheet exactly
  *
- * Rows (driven LOW to select):
- *   0: MCU PB5    1: MCU PB6    2: MCU PB7    3: MCU PB8    4: MCU PB9
- *   5: MCP GPA2   6: MCP GPA3   7: MCP GPA4
+ * Column index → source:
+ *  0: MCU PC14    1: MCU PA3
+ *  2: MCP B0      3: MCP B1      4: MCP B2      5: MCP B3
+ *  6: MCU PB0     7: MCU PB1
+ *  8: MCP B4
+ *  9: MCU PB10
+ * 10: MCP B5     11: MCP B6     12: MCP B7
+ * 13: MCU PB12   14: MCU PB13   15: MCU PB14   16: MCU PB15
+ * 17: MCP A0
  *
- * Columns (read — active LOW = pressed):
- *   0: MCU PC14   1: MCU PA3
- *   2: MCP GPB3   3: MCP GPB4   4: MCP GPB5   5: MCP GPB6
- *   6: MCU PB0    7: MCU PB1
- *   8: MCP GPB7
- *   9: MCU PB10
- *  10: MCP GPB0  11: MCP GPB1  12: MCP GPB2
- *  13: MCU PB12  14: MCU PB13  15: MCU PB14  16: MCU PB15
- *  17: MCP GPA0
+ * Row index → source:
+ *  0: MCU PB5     1: MCU PB6     2: MCU PB7     3: MCU PB8     4: MCU PB9
+ *  5: MCP A2      6: MCP A3      7: MCP A4
  *
- * LEDs (active LOW):
- *   PA15 → NumLock    PB3 → CapsLock    MCP GPA1 → ScrollLock
- *
- * I²C: PA8 = SCL (I2C3, AF4)    PB4 = SDA (I2C3, AF4)
+ * LED:
+ *  LED1 (NumLock)   → MCU PA15
+ *  LED2 (CapsLock)  → MCU PB3
+ *  LED3 (ScrollLock)→ MCP A1
  */
 
-/* ── I²C driver ─────────────────────────────────────────────────────────
- *
- * STM32F4xx uses I2Cv1 (NOT I2Cv2 — no TIMINGR register!).
- * I2Cv1 is configured via OPMODE, CLOCK_SPEED, DUTY_CYCLE.
- *
- * QMK always uses the I2C1_* prefix for these, regardless of which
- * I2C peripheral is selected via I2C_DRIVER.
- *
- * For 400 kHz Fast Mode on STM32F411 (APB1 = 48 MHz):
- *   CLOCK_SPEED  = 400000   (Hz)
- *   DUTY_CYCLE   = FAST_DUTY_CYCLE_2  (Tlow/Thigh = 16/9, better signal)
- *
- * Pin alternate function: PA8=SCL, PB4=SDA both use AF4 for I2C3.
- */
-#define I2C_DRIVER          I2CD3
-#define I2C3_SCL_PIN        A8
-#define I2C3_SDA_PIN        B4
-#define I2C3_SCL_PAL_MODE   4
-#define I2C3_SDA_PAL_MODE   4
+/* MCU rows (indices 0-4) */
+#define MATRIX_ROW_PINS_MCU \
+    { B5, B6, B7, B8, B9 }
 
-/* I2Cv1 timing — prefix is always I2C1_ regardless of peripheral */
-#define I2C1_OPMODE         OPMODE_I2C
-#define I2C1_CLOCK_SPEED    400000
-#define I2C1_DUTY_CYCLE     FAST_DUTY_CYCLE_2
+/* MCU columns — only the MCU-driven ones, in col-index order */
+/* Used by matrix.c directly with the col_map below */
+/* (not used as a flat array in config.h — see matrix.c col_map) */
 
-/* ── VIA ─────────────────────────────────────────────────────────────── */
+/* MCP23017 pin indices (0..15) */
+#define MCP_A0   0
+#define MCP_A1   1
+#define MCP_A2   2
+#define MCP_A3   3
+#define MCP_A4   4
+#define MCP_A5   5
+#define MCP_A6   6
+#define MCP_A7   7
+#define MCP_B0   8
+#define MCP_B1   9
+#define MCP_B2  10
+#define MCP_B3  11
+#define MCP_B4  12
+#define MCP_B5  13
+#define MCP_B6  14
+#define MCP_B7  15
+
+/* MCP rows (indices 5-7) → GPIOA bits A2, A3, A4 */
+#define MATRIX_ROW_PINS_MCP \
+    { MCP_A2, MCP_A3, MCP_A4 }
+
+/* LED pins on MCU */
+#define LED_NUM_LOCK_PIN    A15
+#define LED_CAPS_LOCK_PIN   B3
+/* LED3 (ScrollLock) is on MCP A1 — handled in matrix.c */
+
+/* I2C Configuration for MCP23017 on I2C3 (PA8=SCL, PB4=SDA) */
+#define I2C_DRIVER      I2CD3
+#define I2C1_SCL_PIN    A8
+#define I2C1_SDA_PIN    B4
+#define I2C1_SCL_PAL_MODE 4
+#define I2C1_SDA_PAL_MODE 4
+#define I2C1_TIMINGR_PRESC  2U
+#define I2C1_TIMINGR_SCLDEL 1U
+#define I2C1_TIMINGR_SDADEL 0U
+#define I2C1_TIMINGR_SCLH   9U
+#define I2C1_TIMINGR_SCLL  26U
+
+/* Dynamic keymap / VIA EEPROM sizing */
 #ifndef DYNAMIC_KEYMAP_LAYER_COUNT
-#  define DYNAMIC_KEYMAP_LAYER_COUNT 3
+#define DYNAMIC_KEYMAP_LAYER_COUNT 3
 #endif
 
 #ifndef DYNAMIC_KEYMAP_EEPROM_ADDR
-#  define DYNAMIC_KEYMAP_EEPROM_ADDR (EECONFIG_SIZE)
+#define DYNAMIC_KEYMAP_EEPROM_ADDR (EECONFIG_SIZE)
 #endif
