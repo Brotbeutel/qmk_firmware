@@ -3,7 +3,7 @@
 #include "i2c_master.h"
 #include "gpio.h"
 #include "debounce.h"
-#include "print.h"
+#include <string.h>
 
 #define I2C_ADDR         (0x20 << 1)
 #define MCP_IODIRA       0x00
@@ -32,27 +32,28 @@ typedef struct {
 } col_def_t;
 
 static const col_def_t col_map[MATRIX_COLS] = {
-    [0]  = { SRC_MCU,   .mcu_pin = C14 },
-    [1]  = { SRC_MCU,   .mcu_pin = A3  },
-    [2]  = { SRC_MCP_B, .mcp_bit = 0   },
-    [3]  = { SRC_MCP_B, .mcp_bit = 1   },
-    [4]  = { SRC_MCP_B, .mcp_bit = 2   },
-    [5]  = { SRC_MCP_B, .mcp_bit = 3   },
-    [6]  = { SRC_MCU,   .mcu_pin = B0  },
-    [7]  = { SRC_MCU,   .mcu_pin = B1  },
-    [8]  = { SRC_MCP_B, .mcp_bit = 4   },
-    [9]  = { SRC_MCU,   .mcu_pin = B10 },
-    [10] = { SRC_MCP_B, .mcp_bit = 5   },
-    [11] = { SRC_MCP_B, .mcp_bit = 6   },
-    [12] = { SRC_MCP_B, .mcp_bit = 7   },
-    [13] = { SRC_MCU,   .mcu_pin = B12 },
-    [14] = { SRC_MCU,   .mcu_pin = B13 },
-    [15] = { SRC_MCU,   .mcu_pin = B14 },
-    [16] = { SRC_MCU,   .mcu_pin = B15 },
-    [17] = { SRC_MCP_A, .mcp_bit = 0   },
+    [0]  = { SRC_MCU,   .mcu_pin = C14 },  // PCB Pin 03
+    [1]  = { SRC_MCU,   .mcu_pin = A3  },  // PCB Pin 09
+    [2]  = { SRC_MCP_B, .mcp_bit = 0   },  // MCP B0, PCB Pin 10
+    [3]  = { SRC_MCP_B, .mcp_bit = 1   },  // MCP B1, PCB Pin 11
+    [4]  = { SRC_MCP_B, .mcp_bit = 2   },  // MCP B2, PCB Pin 12
+    [5]  = { SRC_MCP_B, .mcp_bit = 3   },  // MCP B3, PCB Pin 13
+    [6]  = { SRC_MCU,   .mcu_pin = B0  },  // PCB Pin 14
+    [7]  = { SRC_MCU,   .mcu_pin = B1  },  // PCB Pin 15
+    [8]  = { SRC_MCP_B, .mcp_bit = 4   },  // MCP B4, PCB Pin 16
+    [9]  = { SRC_MCU,   .mcu_pin = B10 },  // PCB Pin 17
+    [10] = { SRC_MCP_B, .mcp_bit = 5   },  // MCP B5, PCB Pin 18
+    [11] = { SRC_MCP_B, .mcp_bit = 6   },  // MCP B6, PCB Pin 19
+    [12] = { SRC_MCP_B, .mcp_bit = 7   },  // MCP B7, PCB Pin 20
+    [13] = { SRC_MCU,   .mcu_pin = B12 },  // PCB Pin 21
+    [14] = { SRC_MCU,   .mcu_pin = B13 },  // PCB Pin 22
+    [15] = { SRC_MCU,   .mcu_pin = B14 },  // PCB Pin 23
+    [16] = { SRC_MCU,   .mcu_pin = B15 },  // PCB Pin 24
+    [17] = { SRC_MCP_A, .mcp_bit = 0   },  // MCP A0, PCB Pin 29
 };
 
-static const pin_t mcu_row_pins[] = { B5, B6, B7, B8, B9 };
+/* Row 0=PB5(Pin33), Row 1=PA1(Pin34), Row 2=PA0(Pin35), Row 3=PB8(Pin36), Row 4=PB9(Pin37) */
+static const pin_t mcu_row_pins[] = { B5, A1, A0, B8, B9 };
 #define MCU_ROW_COUNT 5
 static const uint8_t mcp_row_bits[] = { (1<<2), (1<<3), (1<<4) };
 #define MCP_ROW_COUNT 3
@@ -75,51 +76,18 @@ static bool mcp_read_reg(uint8_t reg, uint8_t *val) {
     return i2c_read_register(I2C_ADDR, reg, val, 1, MCP_TIMEOUT) == I2C_STATUS_SUCCESS;
 }
 
-static void i2c_bus_recover(void) {
-    /* Manually clock SCL 9 times to free stuck SDA (I2C bus recovery) */
-    /* SCL=PA8, SDA=PB4 — configure as GPIO temporarily */
-    gpio_set_pin_output(A8);
-    gpio_set_pin_input_high(B4);
-    for (uint8_t i = 0; i < 9; i++) {
-        gpio_write_pin_low(A8);
-        wait_us(5);
-        gpio_write_pin_high(A8);
-        wait_us(5);
-        if (gpio_read_pin(B4)) break; /* SDA released */
-    }
-    /* Generate STOP condition: SDA low->high while SCL high */
-    gpio_set_pin_output(B4);
-    gpio_write_pin_low(B4);
-    wait_us(5);
-    gpio_write_pin_high(A8);
-    wait_us(5);
-    gpio_write_pin_high(B4);
-    wait_us(5);
-    /* Release pins for I2C peripheral */
-    gpio_set_pin_input_high(A8);
-    gpio_set_pin_input_high(B4);
-    wait_ms(10);
-}
-
 static bool init_mcp23017(void) {
     if (!i2c_initialized) {
-        i2c_bus_recover();
         i2c_init();
         i2c_initialized = true;
         wait_ms(100);
     }
-    i2c_status_t r;
-    r = i2c_write_register(I2C_ADDR, MCP_IODIRA, &(uint8_t){IODIRA_VALUE}, 1, MCP_TIMEOUT);
-    uprintf("IODIRA:%d\n", r); if (r) return false;
-    r = i2c_write_register(I2C_ADDR, MCP_IODIRB, &(uint8_t){IODIRB_VALUE}, 1, MCP_TIMEOUT);
-    uprintf("IODIRB:%d\n", r); if (r) return false;
-    r = i2c_write_register(I2C_ADDR, MCP_GPPUA,  &(uint8_t){GPPUA_VALUE},  1, MCP_TIMEOUT);
-    uprintf("GPPUA:%d\n",  r); if (r) return false;
-    r = i2c_write_register(I2C_ADDR, MCP_GPPUB,  &(uint8_t){GPPUB_VALUE},  1, MCP_TIMEOUT);
-    uprintf("GPPUB:%d\n",  r); if (r) return false;
+    if (!mcp_write(MCP_IODIRA, IODIRA_VALUE)) return false;
+    if (!mcp_write(MCP_IODIRB, IODIRB_VALUE)) return false;
+    if (!mcp_write(MCP_GPPUA,  GPPUA_VALUE))  return false;
+    if (!mcp_write(MCP_GPPUB,  GPPUB_VALUE))  return false;
     mcp_olata = OLATA_IDLE;
-    r = i2c_write_register(I2C_ADDR, MCP_OLATA, &mcp_olata, 1, MCP_TIMEOUT);
-    uprintf("OLATA:%d\n",  r); if (r) return false;
+    if (!mcp_write(MCP_OLATA,  mcp_olata))    return false;
     return true;
 }
 
@@ -184,15 +152,6 @@ void matrix_init(void) {
 
 uint8_t matrix_scan(void) {
     bool changed = false;
-
-    static uint32_t scan_count = 0;
-    if (++scan_count % 100000 == 0) {
-        uprintf("scan#%lu rdy=%d\n", scan_count, mcp_ready);
-        if (!mcp_ready) {
-            i2c_initialized = false; /* force bus recovery on retry */
-            mcp_ready = init_mcp23017();
-        }
-    }
 
     for (uint8_t row = 0; row < MATRIX_ROWS; row++) {
         select_row(row);
