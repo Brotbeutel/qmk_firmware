@@ -8,7 +8,7 @@
 
 This project converts a vintage **Cherry G80-3000** keyboard to run open-source QMK firmware with full VIA support. The original controller is replaced by a **WeAct STM32F411 BlackPill**, and an **Adafruit MCP23017 I2C expander** handles the additional matrix lines that the MCU alone cannot cover.
 
-The target layout is a **102-key ISO** (no Windows/Menu keys, original DIN connector replaced with USB-C).
+The target layout is a **105-key ISO**.
 
 ### Goals
 - Full QMK + VIA compatibility
@@ -34,10 +34,10 @@ The target layout is a **102-key ISO** (no Windows/Menu keys, original DIN conne
 
 | Pin | Function |
 |---|---|
-| PB5, PB6, PB7, PB8, PB9 | Rows 0–4 |
+| PB5, PA8, PB4, PB8, PB9 | Rows 0–4 |
 | PC14, PA3, PB0, PB1, PB10, PB12–PB15 | Cols 0, 1, 6, 7, 9, 13–16 |
-| PA8 | I2C3 SCL → MCP23017 |
-| PB4 | I2C3 SDA → MCP23017 |
+| PB6 | I2C1 SCL → MCP23017 |
+| PB7 | I2C1 SDA → MCP23017 |
 | PA15 | NumLock LED |
 | PB3 | CapsLock LED |
 
@@ -92,8 +92,8 @@ Or use **STM32CubeProgrammer** with the generated `.bin` file for more reliable 
 
 Enter the bootloader via one of these methods:
 
-- **Bootmagic reset** — Hold the top-left key (matrix position 0,0) while plugging in USB
-- **Physical reset** — Press the RESET button on the BlackPill
+- **Bootmagic reset** — Hold RightWin key while plugging in USB
+- **Physical reset** — Press the RESET and BOOT button on the BlackPill. Release BOOT last.
 - **Keycode** — Press the key mapped to `QK_BOOT` if available in your keymap
 
 ---
