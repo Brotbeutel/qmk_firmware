@@ -13,7 +13,9 @@
     },
     "features": {
         "bootmagic": true,
-        "via": true
+        "via": true,
+        "mousekey": true,
+        "extrakey": true
     },
     "layouts": {
         "LAYOUT_fullsize_iso_105": {

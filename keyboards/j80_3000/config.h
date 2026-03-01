@@ -40,10 +40,5 @@
 #define I2C1_TIMINGR_SCLH   9U
 #define I2C1_TIMINGR_SCLL   26U
 
-/* Dynamic keymap / VIA */
-#ifndef DYNAMIC_KEYMAP_LAYER_COUNT
+/* VIA: 3 layers */
 #define DYNAMIC_KEYMAP_LAYER_COUNT 3
-#endif
-#ifndef DYNAMIC_KEYMAP_EEPROM_ADDR
-#define DYNAMIC_KEYMAP_EEPROM_ADDR (EECONFIG_SIZE)
-#endif

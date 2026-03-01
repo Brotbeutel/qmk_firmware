@@ -34,12 +34,12 @@ The target layout is a **105-key ISO**.
 
 | Pin | Function |
 |---|---|
-| PB5, PA8, PB4, PB8, PB9 | Rows 0–4 |
+| PB5, PA1, PA0, PB8, PB9 | Rows 0–4 |
 | PC14, PA3, PB0, PB1, PB10, PB12–PB15 | Cols 0, 1, 6, 7, 9, 13–16 |
 | PB6 | I2C1 SCL → MCP23017 |
 | PB7 | I2C1 SDA → MCP23017 |
-| PA15 | NumLock LED |
-| PB3 | CapsLock LED |
+| PA15 | NumLock LED (active-low) |
+| PB3 | CapsLock LED (active-low) |
 
 **MCP23017 → Matrix**
 
@@ -48,7 +48,7 @@ The target layout is a **105-key ISO**.
 | GPA2, GPA3, GPA4 | Rows 5–7 |
 | GPA0 | Col 17 |
 | GPB0–GPB7 | Cols 2–5, 8, 10–12 |
-| GPA1 | ScrollLock LED |
+| GPA1 | ScrollLock LED (active-low) |
 
 ---
 
@@ -108,9 +108,9 @@ This keyboard supports [VIA](https://www.caniusevia.com/) for live keymap editin
 
 - [x] USB enumeration working
 - [x] MCU-direct keys functional
-- [x] QMK + VIA compiling and flashing
-- [ ] MCP23017 I2C key scanning (in progress)
+- [x] MCP23017 I2C key scanning working (all 105 keys)
 - [ ] LED support (NumLock, CapsLock, ScrollLock)
+- [x] QMK + VIA compiling and flashing
 - [ ] Hot-swap socket installation
 - [ ] USB-C port integration
 - [ ] 3D-printed plate

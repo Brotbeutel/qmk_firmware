@@ -72,9 +72,6 @@ static bool mcp_write(uint8_t reg, uint8_t val) {
     return i2c_write_register(I2C_ADDR, reg, &val, 1, MCP_TIMEOUT) == I2C_STATUS_SUCCESS;
 }
 
-static bool mcp_read_reg(uint8_t reg, uint8_t *val) {
-    return i2c_read_register(I2C_ADDR, reg, val, 1, MCP_TIMEOUT) == I2C_STATUS_SUCCESS;
-}
 
 static bool init_mcp23017(void) {
     if (!i2c_initialized) {
@@ -110,8 +107,14 @@ static void unselect_row(uint8_t row) {
 }
 
 static void refresh_mcp_cache(void) {
-    mcp_cache_valid = mcp_read_reg(MCP_GPIOB, &mcp_gpiob_cache)
-                   && mcp_read_reg(MCP_GPIOA, &mcp_gpioa_cache);
+    /* GPIOA=0x12, GPIOB=0x13 are sequential — read both in one I2C transaction */
+    uint8_t buf[2];
+    mcp_cache_valid = (i2c_read_register(I2C_ADDR, MCP_GPIOA, buf, 2, MCP_TIMEOUT)
+                       == I2C_STATUS_SUCCESS);
+    if (mcp_cache_valid) {
+        mcp_gpioa_cache = buf[0];
+        mcp_gpiob_cache = buf[1];
+    }
 }
 
 static matrix_row_t read_cols(void) {
@@ -165,7 +168,6 @@ uint8_t matrix_scan(void) {
             changed = true;
         }
     }
-
 
     changed = debounce(raw_matrix, matrix_data, changed);
     return changed;
