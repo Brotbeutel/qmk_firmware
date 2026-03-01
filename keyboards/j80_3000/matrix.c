@@ -3,17 +3,16 @@
 #include "i2c_master.h"
 #include "gpio.h"
 #include "debounce.h"
-#include <string.h>
+#include "j80_3000.h"
 
-#define I2C_ADDR         (0x20 << 1)
+#define I2C_ADDR        MCP_I2C_ADDR
 #define MCP_IODIRA       0x00
 #define MCP_IODIRB       0x01
 #define MCP_GPPUA        0x0C
 #define MCP_GPPUB        0x0D
-#define MCP_OLATA        0x14
 #define MCP_GPIOA        0x12
 #define MCP_GPIOB        0x13
-#define MCP_TIMEOUT      100
+#define MCP_TIMEOUT     MCP_TIMEOUT_MS
 
 #define IODIRA_VALUE     0xE1
 #define IODIRB_VALUE     0xFF
@@ -71,7 +70,6 @@ static matrix_row_t matrix_data[MATRIX_ROWS];
 static bool mcp_write(uint8_t reg, uint8_t val) {
     return i2c_write_register(I2C_ADDR, reg, &val, 1, MCP_TIMEOUT) == I2C_STATUS_SUCCESS;
 }
-
 
 static bool init_mcp23017(void) {
     if (!i2c_initialized) {

@@ -40,5 +40,3 @@
 #define I2C1_TIMINGR_SCLH   9U
 #define I2C1_TIMINGR_SCLL   26U
 
-/* VIA: 3 layers */
-#define DYNAMIC_KEYMAP_LAYER_COUNT 3
