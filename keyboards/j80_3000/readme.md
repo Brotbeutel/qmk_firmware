@@ -26,7 +26,7 @@ This project converts a vintage **Cherry G80-3000** keyboard to open-source QMK 
 | Component | Notes |
 |---|---|
 | Cherry G80-3000 | **Specifically a G80-3000 LSMDE-0** (ISO-DE). Other G80-3000 variants exist with different matrices — see the compatibility warning in the Disassembly section. |
-| [WeAct STM32F411 BlackPill](https://de.aliexpress.com/item/1005001456186625.html) | STM32F411CEU6. The C variant (128 KB Flash) also works. |
+| [WeAct STM32F411 BlackPill](https://de.aliexpress.com/item/1005001456186625.html) | STM32F411CEU6. Order the **"25M HSE"** variant (with or without external flash — it is unused by QMK). The "8M HSE" variant requires manual clock configuration and is not recommended. Note: some sellers ship the 25M version regardless of what is ordered — verify by reading the crystal next to the STM32 chip: it should say **25.000**. |
 | [Adafruit MCP23017 I2C Expander](https://de.aliexpress.com/item/1005005596741592.html) | The Adafruit breakout board includes pull-up resistors on SDA/SCL — no external pull-ups needed. |
 | [RTLECS Hot-Swap Sockets](https://de.aliexpress.com/item/1005009260905480.html) | Optional. Millmax-style, fits MX footprint. |
 | [3D-Printable Switch Plate](https://www.printables.com/model/607992-plate-for-1990-cherry-g80-3000-hao-wkl-keyboard) | Optional. Designed for the 1990-era G80-3000 HAO/WKL variant. |
@@ -128,13 +128,13 @@ Also connect power to the keyboard PCB itself:
 
 ### LEDs
 
-The indicator LEDs are driven **active-low** (output LOW = LED on).
+The indicator LEDs are driven **active-high** (output HIGH = LED on).
 
 | LED | Source | Pin | PCB Pin |
 |---|---|---|---|
 | NumLock | BlackPill | PA15 | Pin 30 |
 | CapsLock | BlackPill | PB3 | Pin 31 |
-| ScrollLock | MCP23017 | GPA1 | Pin 32 |
+| ScrollLock | BlackPill | PA2 | Pin 32 |
 
 > LED firmware support is implemented. The PCB-side LED wiring is still pending in this build.
 

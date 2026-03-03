@@ -1,3 +1,6 @@
+// Copyright 2025 Brotbeutel (@Brotbeutel)
+// SPDX-License-Identifier: GPL-2.0-or-later
+
 #pragma once
 
 /* MCP23017 I2C address: A2=A1=A0=GND → 0x20 */

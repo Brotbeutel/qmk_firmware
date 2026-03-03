@@ -1,3 +1,6 @@
+// Copyright 2025 Brotbeutel (@Brotbeutel)
+// SPDX-License-Identifier: GPL-2.0-or-later
+
 #include "matrix.h"
 #include "wait.h"
 #include "i2c_master.h"
@@ -14,9 +17,9 @@
 #define MCP_GPIOB        0x13
 #define MCP_TIMEOUT     MCP_TIMEOUT_MS
 
-#define IODIRA_VALUE     0xE1
+#define IODIRA_VALUE     0xE3  /* GPA0=in(col17), GPA1=in(unused), GPA2-4=out(rows), GPA5-7=in */
 #define IODIRB_VALUE     0xFF
-#define GPPUA_VALUE      0xE1
+#define GPPUA_VALUE      0xE3
 #define GPPUB_VALUE      0xFF
 #define OLATA_IDLE       0xFF
 
@@ -144,8 +147,9 @@ void matrix_init(void) {
         if (col_map[c].src == SRC_MCU)
             gpio_set_pin_input_high(col_map[c].mcu_pin);
 
-    gpio_set_pin_output(A15); gpio_write_pin_high(A15);
-    gpio_set_pin_output(B3);  gpio_write_pin_high(B3);
+    gpio_set_pin_output(A15); gpio_write_pin_low(A15);
+    gpio_set_pin_output(B3);  gpio_write_pin_low(B3);
+    gpio_set_pin_output(A2);  gpio_write_pin_low(A2);
 
     mcp_ready = init_mcp23017();
     debounce_init();

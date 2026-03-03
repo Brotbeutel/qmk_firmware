@@ -1,5 +1,5 @@
 {
-    "manufacturer": "Brotbeutel",
+    "manufacturer": "Cherry (Brotbeutel conversion)",
     "keyboard_name": "J80-3000",
     "maintainer": "Brotbeutel",
     "board": "BLACKPILL_STM32_F411",
@@ -13,9 +13,11 @@
     },
     "features": {
         "bootmagic": true,
-        "via": true,
         "mousekey": true,
-        "extrakey": true
+        "extrakey": true,
+        "caps_word": true,
+        "key_override": true,
+        "via": true
     },
     "layouts": {
         "LAYOUT_fullsize_iso_105": {
@@ -881,6 +883,12 @@
             ]
         }
     },
+    "indicators": {
+        "num_lock": "A15",
+        "caps_lock": "B3",
+        "scroll_lock": "A2"
+    },
+    "url": "",
     "dynamic_keymap": {
         "layer_count": 3
     }

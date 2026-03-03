@@ -1,3 +1,6 @@
+// Copyright 2025 Brotbeutel (@Brotbeutel)
+// SPDX-License-Identifier: GPL-2.0-or-later
+
 #pragma once
 
 /* KEY MATRIX SIZE */
@@ -22,13 +25,13 @@
  *  3: MCU PB8     4: MCU PB9
  *  5: MCP A2      6: MCP A3      7: MCP A4
  *
- * LED:
- *  LED1 (NumLock)   → MCU PA15
- *  LED2 (CapsLock)  → MCU PB3
- *  LED3 (ScrollLock)→ MCP A1
+ * LED (active-high):
+ *  NumLock    → MCU PA15
+ *  CapsLock   → MCU PB3
+ *  ScrollLock → MCU PA2
  */
 
-/* I2C1 on PB6=SCL, PB7=SDA — both AF4, well-tested in QMK */
+/* I2C1 on PB6=SCL, PB7=SDA — both AF4 */
 #define I2C_DRIVER          I2CD1
 #define I2C1_SCL_PIN        B6
 #define I2C1_SDA_PIN        B7
@@ -40,3 +43,9 @@
 #define I2C1_TIMINGR_SCLH   9U
 #define I2C1_TIMINGR_SCLL   26U
 
+/* Debounce: 3ms, eager on keydown for snappy response */
+#define DEBOUNCE 3
+#define DEBOUNCE_TYPE asym_eager_defer_pk
+
+/* Caps Word: deactivates after 5 seconds of inactivity */
+#define CAPS_WORD_IDLE_TIMEOUT 5000
