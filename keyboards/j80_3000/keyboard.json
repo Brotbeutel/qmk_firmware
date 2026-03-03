@@ -1,5 +1,5 @@
 {
-    "manufacturer": "Cherry (Brotbeutel conversion)",
+    "manufacturer": "Cherry & Brotbeutel",
     "keyboard_name": "J80-3000",
     "maintainer": "Brotbeutel",
     "board": "BLACKPILL_STM32_F411",
@@ -7,7 +7,7 @@
     "bootloader": "stm32-dfu",
     "diode_direction": "COL2ROW",
     "usb": {
-        "device_version": "1.0.0",
+        "device_version": "0.5.0",
         "pid": "0x4A38",
         "vid": "0x4A53"
     },
@@ -17,7 +17,10 @@
         "extrakey": true,
         "caps_word": true,
         "key_override": true,
-        "via": true
+        "via": true,
+        "nkro": false,
+        "rgblight": false,
+        "backlight": false
     },
     "layouts": {
         "LAYOUT_fullsize_iso_105": {
