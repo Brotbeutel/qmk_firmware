@@ -62,7 +62,7 @@ const key_override_t *key_overrides[] = {
  *
  * FN LAYER (2) — hold RightMenu/Fn
  * ┌────┐    ┌────┬────┬────┬────┐ ┌────┬────┬────┬────┐ ┌────┬────┬────┬────┐ ┌────┬────┬────┐
- * │Esc │    │ F1 │ F2 │ F3 │ F4 │ │ F5 │ F6 │ F7 │ F8 │ │ F9 │NoCp│Caps│Boot│ │Rset│RBt │Pwr │
+ * │Slp │    │Calc│Mail│Asst│Brws│ │ F5 │ F6 │ F7 │ F8 │ │ F9 │NoCp│Caps│Boot│ │Rset│RBt │Pwr │
  * └────┘    └────┴────┴────┴────┘ └────┴────┴────┴────┘ └────┴────┴────┴────┘ └────┴────┴────┘
  * ┌────┬────┬────┬────┬────┬────┬────┬────┬────┬────┬────┬────┬────┬────────┐ ┌────┬────┬────┐ ┌────┬────┬────┬────┐
  * │ `  │ 1  │ 2  │ 3  │ 4  │ 5  │ 6  │ 7  │ 8  │ 9  │ 0  │ -  │ =  │Backspce│ │Ins │Home│Br+ │ │Tgl1│ /  │ *  │ -  │
@@ -102,7 +102,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
 
     [FN] = LAYOUT_fullsize_iso_105(
-        KC_ESC,           KC_CALC, KC_MAIL, KC_F3,   KC_F4,   KC_F5,   KC_F6,   KC_F7,  KC_F8,   KC_F9,   CL_CTRL, CL_CAPS, QK_BOOT,      EE_CLR,  QK_RBT,  KC_PWR,
+        KC_SLEP,          KC_CALC, KC_ASST, KC_MAIL, KC_WHOM, KC_F5,   KC_F6,   KC_F7,  KC_F8,   KC_F9,   CL_CTRL, CL_CAPS, QK_BOOT,      EE_CLR,  QK_RBT,  KC_PWR,
 
         KC_GRV,  KC_1,    KC_2,    KC_3,    KC_4,    KC_5,    KC_6,    KC_7,    KC_8,   KC_9,    KC_0,    KC_MINS, KC_EQL,  KC_BSPC,      KC_INS,  KC_HOME, KC_BRIU,      TG(1),   KC_PSLS, KC_PAST, KC_PMNS,
         KC_TAB,  MS_BTN1, MS_UP,   MS_BTN2, MS_BTN3, MS_WHLU, KC_Y,    KC_U,    KC_I,   KC_O,    KC_P,    KC_LBRC, KC_RBRC,               KC_DEL,  KC_END,  KC_BRID,      KC_P7,   KC_P8,   KC_P9,   KC_PPLS,

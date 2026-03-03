@@ -185,7 +185,7 @@ The BlackPill uses the STM32 USB DFU bootloader. Enter it via one of:
 |---|---|
 | **Bootmagic** | Hold **RightWin** while plugging in USB |
 | **Physical** | Hold BOOT0, tap RESET, release BOOT0 |
-| **Keycode** | Press `QK_BOOT` if mapped in your keymap |
+| **Keycode** | Press `QK_BOOT` → FN + F12 by default |
 
 ---
 
