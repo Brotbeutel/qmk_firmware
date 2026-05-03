@@ -59,3 +59,6 @@
 
 /* Caps Word: deactivates after 5 seconds of inactivity */
 #define CAPS_WORD_IDLE_TIMEOUT 5000
+
+/* Temporary: measure actual matrix scan rate via qmk console */
+#define DEBUG_MATRIX_SCAN_RATE
