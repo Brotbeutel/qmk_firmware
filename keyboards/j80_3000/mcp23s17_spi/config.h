@@ -8,7 +8,7 @@
 #define MATRIX_COLS 18
 
 /*
- * WIRING — J80-3000 with bit-bang SPI on PA5/PA6/PA7, CS=PB6
+ * WIRING — J80-3000 with SPI1 on PA5/PA6/PA7, CS=PB6
  *
  * Column index -> source:
  *  0: MCU PC14    1: MCU PA3
@@ -25,18 +25,49 @@
  *  3: MCU PB8     4: MCU PB9
  *  5: MCP A2      6: MCP A3      7: MCP A4
  *
- * SPI (bit-bang): SCK=PA5, MOSI=PA7, MISO=PA6, CS=PB6
- * MISO requires external 10kΩ pull-up to 3.3V (MCP23S17 SO is open-drain)
- *
  * LED (active-high):
  *  NumLock    -> MCU PA15
  *  CapsLock   -> MCU PB3
  *  ScrollLock -> MCU PB4
+ *
+ * SPI1 (hardware, ChibiOS SPID1 via QMK spi_master):
+ *  SCK  -> PA5  (AF5)
+ *  MOSI -> PA7  (AF5)
+ *  MISO -> PA6  (AF5) — 1kΩ external pull-up to 3.3V (MCP SO is open-drain)
+ *  CS   -> PB6  (GPIO, managed by spi_master)
+ *  ⚠️  PA4 = SPI1 hardware-NSS AND onboard W25Q64 flash CS — must stay HIGH
  */
 
-/* Debounce: 3ms, eager on keydown for snappy response */
-#define DEBOUNCE 3
-#define DEBOUNCE_TYPE asym_eager_defer_pk
+/* SPI1 pin definitions for QMK spi_master / ChibiOS */
+#define SPI_DRIVER        SPID1
+#define SPI_SCK_PIN       A5
+#define SPI_SCK_PAL_MODE  5
+#define SPI_MOSI_PIN      A7
+#define SPI_MOSI_PAL_MODE 5
+#define SPI_MISO_PIN      A6
+#define SPI_MISO_PAL_MODE 5
+
+/* Debounce — configured in keyboard.json (debounce: 3, debounce_type: asym_eager_defer_pk) */
+
+/* ── USB performance ──────────────────────────────────────────────────────── */
+/* 1ms polling interval = 1000Hz — reduces input latency from ~10ms to <5ms   */
+#define USB_POLLING_INTERVAL_MS 1
+/* Process up to 12 key events per scan cycle (default: 4).                   */
+/* Prevents key event queuing during fast typing or combo use.                 */
+#define QMK_KEYS_PER_SCAN 12
+
+/* ── Scan rate measurement (debug only) ──────────────────────────────────── */
+/* Uncomment + add CONSOLE_ENABLE = yes in rules.mk, then run: qmk console    */
+/* Output example:  > matrix scan frequency: 1840                             */
+// #define DEBUG_MATRIX_SCAN_RATE
+
+/* ── KITT startup sequence ────────────────────────────────────────────────── */
+/* Total duration of all runs combined, in milliseconds.                       */
+#define KITT_DURATION_MS   4000
+/* Number of complete left → right → left sweeps.                             */
+#define KITT_RUNS          3
+/* Extra pause at each end (left-most and right-most LED), in milliseconds.   */
+#define KITT_END_DWELL_MS  300
 
 /* Caps Word: deactivates after 5 seconds of inactivity */
 #define CAPS_WORD_IDLE_TIMEOUT 5000

@@ -82,7 +82,7 @@ static const col_def_t col_map[MATRIX_COLS] = {
     [3]  = { SRC_MCP_B, .mcp_bit = 1   },
     [4]  = { SRC_MCP_B, .mcp_bit = 2   },
     [5]  = { SRC_MCP_B, .mcp_bit = 3   },
-    [6]  = { SRC_MCU,   .mcu_pin = B7  },  // B0 had F401 conflict, using B7
+    [6]  = { SRC_MCU,   .mcu_pin = B7  },  // PCB Pin 14 (PB0 unusable on F401)
     [7]  = { SRC_MCU,   .mcu_pin = B1  },
     [8]  = { SRC_MCP_B, .mcp_bit = 4   },
     [9]  = { SRC_MCU,   .mcu_pin = B10 },
@@ -100,7 +100,6 @@ static const col_def_t col_map[MATRIX_COLS] = {
 static const pin_t   mcu_row_pins[] = { B5, A1, A0, B8, B9 };
 static const uint8_t mcp_row_bits[] = { (1<<2), (1<<3), (1<<4) };
 #define MCU_ROW_COUNT 5
-#define MCP_ROW_COUNT 3
 
 /* ── State ────────────────────────────────────────────────────────────────── */
 bool    mcp_ready      = false;

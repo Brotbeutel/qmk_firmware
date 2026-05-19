@@ -5,173 +5,204 @@
 #include "wait.h"
 #include "gpio.h"
 #include "debounce.h"
+#include "spi_master.h"
 #include "j80_3000.h"
 
-/* MCP23S17 register addresses */
+/* ── MCP23S17 register addresses ─────────────────────────────────────────── */
 #define MCP_IODIRA  0x00
 #define MCP_IODIRB  0x01
 #define MCP_GPPUA   0x0C
 #define MCP_GPPUB   0x0D
 #define MCP_GPIOA   0x12
 #define MCP_GPIOB   0x13
+/* MCP_OLATA (0x14) defined in j80_3000.h */
 
-/* GPA0=in(col17), GPA2-4=out(rows 5-7) */
+/*
+ * GPA0       = input  (COL17)
+ * GPA1       = input  (unused)
+ * GPA2–GPA4  = output (ROW5–ROW7)
+ * GPA5–GPA7  = input  (unused)
+ * GPB0–GPB7  = input  (COL2–COL5, COL8, COL10–COL12)
+ */
 #define IODIRA_VALUE 0xE3
 #define IODIRB_VALUE 0xFF
 #define GPPUA_VALUE  0xE3
 #define GPPUB_VALUE  0xFF
 #define OLATA_IDLE   0xFF
 
-/* ── Bit-bang SPI ─────────────────────────────────────────────────────────
- * SCK=PA5, MOSI=PA7, MISO=PA6, CS=PB6
- * CPOL=0 CPHA=0: clock idles LOW, data sampled on rising edge
- */
-static inline void mcp_cs_low(void)  { gpio_write_pin_low(B6); }
-static inline void mcp_cs_high(void) { gpio_write_pin_high(B6); }
+/* ── Row/column definitions ───────────────────────────────────────────────── */
 
-static inline void bb_spi_init(void) {
-    gpio_set_pin_output(A5); gpio_write_pin_low(A5);   // SCK
-    gpio_set_pin_output(A7); gpio_write_pin_low(A7);   // MOSI
-    gpio_set_pin_input_high(A6);                        // MISO — internal pull-up + external 10k
-    gpio_set_pin_output(B6); gpio_write_pin_high(B6);  // CS
-}
-
-static inline void bb_byte_out(uint8_t b) {
-    for (int8_t i = 7; i >= 0; i--) {
-        gpio_write_pin(A7, (b >> i) & 1);
-        __NOP(); __NOP(); __NOP(); __NOP();
-        gpio_write_pin_high(A5);
-        __NOP(); __NOP(); __NOP(); __NOP();
-        gpio_write_pin_low(A5);
-        __NOP(); __NOP(); __NOP(); __NOP();
-    }
-}
-
-static inline uint8_t bb_byte_in(void) {
-    uint8_t b = 0;
-    for (int8_t i = 7; i >= 0; i--) {
-        gpio_write_pin_low(A5);   /* SCK LOW — MCP puts next bit on MISO */
-        wait_us(2);               /* wait for open-drain MISO to charge via pull-up */
-        gpio_write_pin_high(A5);  /* SCK HIGH — sample MISO */
-        b |= (gpio_read_pin(A6) << i);
-    }
-    gpio_write_pin_low(A5);
-    return b;
-}
-
-static inline void mcp_write_reg(uint8_t reg, uint8_t val) {
-    mcp_cs_low();
-    bb_byte_out(MCP_WRITE_OPCODE);
-    bb_byte_out(reg);
-    bb_byte_out(val);
-    mcp_cs_high();
-}
-
-/* ── Column map ───────────────────────────────────────────────────────────── */
-typedef enum { SRC_MCU, SRC_MCP_A, SRC_MCP_B } col_source_t;
-
-typedef struct {
-    col_source_t src;
-    union { pin_t mcu_pin; uint8_t mcp_bit; };
-} col_def_t;
-
-static const col_def_t col_map[MATRIX_COLS] = {
-    [0]  = { SRC_MCU,   .mcu_pin = C14 },
-    [1]  = { SRC_MCU,   .mcu_pin = A3  },
-    [2]  = { SRC_MCP_B, .mcp_bit = 0   },
-    [3]  = { SRC_MCP_B, .mcp_bit = 1   },
-    [4]  = { SRC_MCP_B, .mcp_bit = 2   },
-    [5]  = { SRC_MCP_B, .mcp_bit = 3   },
-    [6]  = { SRC_MCU,   .mcu_pin = B7  },  // PCB Pin 14 (PB0 unusable on F401)
-    [7]  = { SRC_MCU,   .mcu_pin = B1  },
-    [8]  = { SRC_MCP_B, .mcp_bit = 4   },
-    [9]  = { SRC_MCU,   .mcu_pin = B10 },
-    [10] = { SRC_MCP_B, .mcp_bit = 5   },
-    [11] = { SRC_MCP_B, .mcp_bit = 6   },
-    [12] = { SRC_MCP_B, .mcp_bit = 7   },
-    [13] = { SRC_MCU,   .mcu_pin = B12 },
-    [14] = { SRC_MCU,   .mcu_pin = B13 },
-    [15] = { SRC_MCU,   .mcu_pin = B14 },
-    [16] = { SRC_MCU,   .mcu_pin = B15 },
-    [17] = { SRC_MCP_A, .mcp_bit = 0   },
-};
-
-/* ── Row pins ─────────────────────────────────────────────────────────────── */
-static const pin_t   mcu_row_pins[] = { B5, A1, A0, B8, B9 };
-static const uint8_t mcp_row_bits[] = { (1<<2), (1<<3), (1<<4) };
+static const pin_t mcu_row_pins[] = { B5, A1, A0, B8, B9 };
 #define MCU_ROW_COUNT 5
 
-/* ── State ────────────────────────────────────────────────────────────────── */
-bool    mcp_ready      = false;
-uint8_t mcp_olata      = OLATA_IDLE;
-static uint8_t mcp_gpioa_cache = 0xFF;
-static uint8_t mcp_gpiob_cache = 0xFF;
-static bool    mcp_cache_valid = false;
+static const uint8_t mcp_row_bits[] = { (1 << 2), (1 << 3), (1 << 4) };
+
+/* MCU column pins in matrix order — only used for init (input_high setup).
+ * read_cols() accesses the GPIO ports directly for speed. */
+static const pin_t mcu_col_pins[] = { C14, A3, B7, B1, B10, B12, B13, B14, B15 };
+
+/* ── Module state ─────────────────────────────────────────────────────────── */
+
+static bool    mcp_ready      = false;
+static uint8_t mcp_olata      = OLATA_IDLE;
+static uint8_t mcp_gpioa      = 0xFF;
+static uint8_t mcp_gpiob      = 0xFF;
 
 static matrix_row_t raw_matrix[MATRIX_ROWS];
 static matrix_row_t matrix_data[MATRIX_ROWS];
 
+/* ── SPI helpers ──────────────────────────────────────────────────────────── */
+
+static void mcp_write_reg(uint8_t reg, uint8_t val) {
+    spi_start(MCP_CS_PIN, false, 0, MCP_SPI_DIVISOR);
+    spi_write(MCP_WRITE_OPCODE);
+    spi_write(reg);
+    spi_write(val);
+    spi_stop();
+}
+
+static uint8_t mcp_read_reg(uint8_t reg) {
+    spi_start(MCP_CS_PIN, false, 0, MCP_SPI_DIVISOR);
+    spi_write(MCP_READ_OPCODE);
+    spi_write(reg);
+    uint8_t val = (uint8_t)spi_read();
+    spi_stop();
+    return val;
+}
+
+/* Reads GPIOA + GPIOB in one transaction (sequential-read, SEQOP=0 default). */
+static inline void mcp_read_gpio(void) {
+    spi_start(MCP_CS_PIN, false, 0, MCP_SPI_DIVISOR);
+    spi_write(MCP_READ_OPCODE);
+    spi_write(MCP_GPIOA);
+    mcp_gpioa = (uint8_t)spi_read();
+    mcp_gpiob = (uint8_t)spi_read();
+    spi_stop();
+}
+
+/* ── MCP23S17 init ────────────────────────────────────────────────────────── */
+
 static bool init_mcp23s17(void) {
-    bb_spi_init();
+    spi_init();
+    gpio_set_pin_output(MCP_CS_PIN);
+    gpio_write_pin_high(MCP_CS_PIN);
     wait_ms(10);
+
     mcp_write_reg(MCP_IODIRA, IODIRA_VALUE);
     mcp_write_reg(MCP_IODIRB, IODIRB_VALUE);
     mcp_write_reg(MCP_GPPUA,  GPPUA_VALUE);
     mcp_write_reg(MCP_GPPUB,  GPPUB_VALUE);
-    mcp_olata = OLATA_IDLE;
-    mcp_write_reg(MCP_OLATA,  mcp_olata);
-    return true;
+    mcp_write_reg(MCP_OLATA,  OLATA_IDLE);
+
+    /* Verify comms by reading back a known register */
+    return (mcp_read_reg(MCP_IODIRA) == IODIRA_VALUE);
 }
 
-static inline void refresh_mcp_cache(void) {
-    mcp_cs_low();
-    bb_byte_out(MCP_READ_OPCODE);
-    bb_byte_out(MCP_GPIOA);
-    mcp_gpioa_cache = bb_byte_in();
-    mcp_gpiob_cache = bb_byte_in();
-    mcp_cs_high();
-    mcp_cache_valid = true;
+/* ── KITT startup sequence ────────────────────────────────────────────────── */
+/*
+ * Physical LED order, left to right:
+ *   index 0 = NumLock    (PA15)
+ *   index 1 = CapsLock   (PB3)
+ *   index 2 = ScrollLock (PB4)
+ *
+ * Three tunable parameters (set in config.h):
+ *   KITT_DURATION_MS   — total wall-clock time for all runs combined
+ *   KITT_RUNS          — number of complete left→right→left sweeps
+ *   KITT_END_DWELL_MS  — extra pause at the left and right end positions
+ *
+ * Sequence shape: 1,2,3,[dwell],2,1,[dwell],  1,2,3,[dwell],2,1,[dwell], ...
+ *
+ * Step timing is derived automatically:
+ *   Each run has (2n-1) steps and 2 end-dwells.
+ *   step_ms = (KITT_DURATION_MS/KITT_RUNS - 2*KITT_END_DWELL_MS) / (2n-1)
+ */
+static void knight_rider_sequence(void) {
+    static const pin_t leds[] = { A15, B3, B4 };
+    const uint8_t n = sizeof(leds) / sizeof(leds[0]);
+
+    /* Derived step duration — clamped to 10ms minimum to stay visible */
+    const uint8_t  steps_per_run  = 2 * n - 1;
+    const uint16_t time_per_run   = KITT_DURATION_MS / KITT_RUNS;
+    const uint16_t dwell_budget   = 2 * KITT_END_DWELL_MS;
+    const uint16_t step_ms        = (time_per_run > dwell_budget)
+        ? ((time_per_run - dwell_budget) / steps_per_run)
+        : 10;
+
+    for (uint8_t run = 0; run < KITT_RUNS; run++) {
+        /* Forward sweep: LED0 → LED(n-1) */
+        for (uint8_t i = 0; i < n; i++) {
+            for (uint8_t j = 0; j < n; j++)
+                gpio_write_pin(leds[j], j == i);
+            wait_ms(step_ms);
+            if (i == n - 1) wait_ms(KITT_END_DWELL_MS);
+        }
+        /* Backward sweep: LED(n-2) → LED0
+         * Start at n-2 so the right-end LED isn't shown twice. */
+        for (int8_t i = (int8_t)(n - 2); i >= 0; i--) {
+            for (uint8_t j = 0; j < n; j++)
+                gpio_write_pin(leds[j], j == (uint8_t)i);
+            wait_ms(step_ms);
+            if (i == 0) wait_ms(KITT_END_DWELL_MS);
+        }
+        /* LED0 at end of this run merges naturally with LED0 at start of the
+         * next run, producing the correct left-end double-frame. */
+    }
+
+    /* All off — QMK indicator system takes over */
+    for (uint8_t i = 0; i < n; i++)
+        gpio_write_pin_low(leds[i]);
 }
+
+/* ── Column read ──────────────────────────────────────────────────────────── */
 
 static matrix_row_t read_cols(void) {
     matrix_row_t val = 0;
 
-    uint32_t pb = palReadPort(GPIOB);
     uint32_t pa = palReadPort(GPIOA);
+    uint32_t pb = palReadPort(GPIOB);
     uint32_t pc = palReadPort(GPIOC);
 
-    if (!(pc & (1U<<14))) val |= (MATRIX_ROW_SHIFTER <<  0);
-    if (!(pa & (1U<< 3))) val |= (MATRIX_ROW_SHIFTER <<  1);
-    if (!(pb & (1U<< 7))) val |= (MATRIX_ROW_SHIFTER <<  6);  // B7 -> col 6
-    if (!(pb & (1U<< 1))) val |= (MATRIX_ROW_SHIFTER <<  7);
-    if (!(pb & (1U<<10))) val |= (MATRIX_ROW_SHIFTER <<  9);
-    if (!(pb & (1U<<12))) val |= (MATRIX_ROW_SHIFTER << 13);
-    if (!(pb & (1U<<13))) val |= (MATRIX_ROW_SHIFTER << 14);
-    if (!(pb & (1U<<14))) val |= (MATRIX_ROW_SHIFTER << 15);
-    if (!(pb & (1U<<15))) val |= (MATRIX_ROW_SHIFTER << 16);
+    /* MCU columns — active-low */
+    if (!(pc & (1U << 14))) val |= (MATRIX_ROW_SHIFTER <<  0);  /* C14 = COL0  */
+    if (!(pa & (1U <<  3))) val |= (MATRIX_ROW_SHIFTER <<  1);  /* A3  = COL1  */
+    if (!(pb & (1U <<  7))) val |= (MATRIX_ROW_SHIFTER <<  6);  /* B7  = COL6  */
+    if (!(pb & (1U <<  1))) val |= (MATRIX_ROW_SHIFTER <<  7);  /* B1  = COL7  */
+    if (!(pb & (1U << 10))) val |= (MATRIX_ROW_SHIFTER <<  9);  /* B10 = COL9  */
+    if (!(pb & (1U << 12))) val |= (MATRIX_ROW_SHIFTER << 13);  /* B12 = COL13 */
+    if (!(pb & (1U << 13))) val |= (MATRIX_ROW_SHIFTER << 14);  /* B13 = COL14 */
+    if (!(pb & (1U << 14))) val |= (MATRIX_ROW_SHIFTER << 15);  /* B14 = COL15 */
+    if (!(pb & (1U << 15))) val |= (MATRIX_ROW_SHIFTER << 16);  /* B15 = COL16 */
 
-    if (mcp_cache_valid) {
-        uint8_t b = ~mcp_gpiob_cache;
-        if (b & (1<<0)) val |= (MATRIX_ROW_SHIFTER <<  2);
-        if (b & (1<<1)) val |= (MATRIX_ROW_SHIFTER <<  3);
-        if (b & (1<<2)) val |= (MATRIX_ROW_SHIFTER <<  4);
-        if (b & (1<<3)) val |= (MATRIX_ROW_SHIFTER <<  5);
-        if (b & (1<<4)) val |= (MATRIX_ROW_SHIFTER <<  8);
-        if (b & (1<<5)) val |= (MATRIX_ROW_SHIFTER << 10);
-        if (b & (1<<6)) val |= (MATRIX_ROW_SHIFTER << 11);
-        if (b & (1<<7)) val |= (MATRIX_ROW_SHIFTER << 12);
-        if (~mcp_gpioa_cache & (1<<0)) val |= (MATRIX_ROW_SHIFTER << 17);
-    }
+    /* MCP columns — active-low */
+    uint8_t b = ~mcp_gpiob;
+    if (b & (1 << 0)) val |= (MATRIX_ROW_SHIFTER <<  2);        /* GPB0 = COL2  */
+    if (b & (1 << 1)) val |= (MATRIX_ROW_SHIFTER <<  3);        /* GPB1 = COL3  */
+    if (b & (1 << 2)) val |= (MATRIX_ROW_SHIFTER <<  4);        /* GPB2 = COL4  */
+    if (b & (1 << 3)) val |= (MATRIX_ROW_SHIFTER <<  5);        /* GPB3 = COL5  */
+    if (b & (1 << 4)) val |= (MATRIX_ROW_SHIFTER <<  8);        /* GPB4 = COL8  */
+    if (b & (1 << 5)) val |= (MATRIX_ROW_SHIFTER << 10);        /* GPB5 = COL10 */
+    if (b & (1 << 6)) val |= (MATRIX_ROW_SHIFTER << 11);        /* GPB6 = COL11 */
+    if (b & (1 << 7)) val |= (MATRIX_ROW_SHIFTER << 12);        /* GPB7 = COL12 */
+    if (~mcp_gpioa & (1 << 0))
+        val |= (MATRIX_ROW_SHIFTER << 17);                       /* GPA0 = COL17 */
 
     return val;
 }
 
+/* ── Public API ───────────────────────────────────────────────────────────── */
+
 void matrix_init(void) {
+    /*
+     * PA4 = SPI1 hardware-NSS AND CS of the onboard W25Q64 flash chip.
+     * Must stay HIGH — keep as input-high so the flash never activates.
+     */
+    gpio_set_pin_input_high(A4);
+
     for (uint8_t r = 0; r < MCU_ROW_COUNT; r++)
         gpio_set_pin_input_high(mcu_row_pins[r]);
-    for (uint8_t c = 0; c < MATRIX_COLS; c++)
-        if (col_map[c].src == SRC_MCU)
-            gpio_set_pin_input_high(col_map[c].mcu_pin);
+
+    for (uint8_t c = 0; c < (sizeof(mcu_col_pins) / sizeof(mcu_col_pins[0])); c++)
+        gpio_set_pin_input_high(mcu_col_pins[c]);
 
     gpio_set_pin_output(A15); gpio_write_pin_low(A15);
     gpio_set_pin_output(B3);  gpio_write_pin_low(B3);
@@ -179,13 +210,18 @@ void matrix_init(void) {
 
     mcp_ready = init_mcp23s17();
 
+    knight_rider_sequence();
+
     debounce_init();
+    matrix_init_kb();  /* required: enables keyboard/user-level init hooks */
 }
 
 uint8_t matrix_scan(void) {
     bool changed = false;
 
     for (uint8_t row = 0; row < MATRIX_ROWS; row++) {
+
+        /* Select row */
         if (row < MCU_ROW_COUNT) {
             gpio_set_pin_output(mcu_row_pins[row]);
             gpio_write_pin_low(mcu_row_pins[row]);
@@ -196,14 +232,15 @@ uint8_t matrix_scan(void) {
             wait_us(5);
         }
 
-        if (mcp_ready) refresh_mcp_cache();
+        /* Read MCP GPIO while row is active, then sample all columns */
+        if (mcp_ready) mcp_read_gpio();
         matrix_row_t row_val = read_cols();
 
+        /* Deselect row */
         if (row < MCU_ROW_COUNT) {
             gpio_set_pin_input_high(mcu_row_pins[row]);
         } else if (mcp_ready) {
-            if (row == MATRIX_ROWS - 1)
-                mcp_write_reg(MCP_OLATA, mcp_olata);
+            mcp_write_reg(MCP_OLATA, mcp_olata);
         }
 
         if (raw_matrix[row] != row_val) {
@@ -213,8 +250,17 @@ uint8_t matrix_scan(void) {
     }
 
     changed = debounce(raw_matrix, matrix_data, changed);
+    matrix_scan_kb();  /* required: enables keyboard/user-level scan hooks */
     return changed;
 }
 
 matrix_row_t matrix_get_row(uint8_t row) { return matrix_data[row]; }
 void         matrix_print(void)          {}
+
+/* ── QMK callback stubs ──────────────────────────────────────────────────── */
+/* These weak symbols allow keyboard.c and keymap.c to override behaviour     */
+/* without breaking builds that don't need them.                              */
+__attribute__((weak)) void matrix_init_kb(void)  { matrix_init_user(); }
+__attribute__((weak)) void matrix_scan_kb(void)  { matrix_scan_user(); }
+__attribute__((weak)) void matrix_init_user(void) {}
+__attribute__((weak)) void matrix_scan_user(void) {}
